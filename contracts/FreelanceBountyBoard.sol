@@ -28,17 +28,27 @@ contract FreelanceBountyBoard {
     event WorkSubmitted(uint256 indexed bountyId, address indexed freelancer, string submissionUrl);
     event BountyPaid(uint256 indexed bountyId, address indexed freelancer, uint256 amount);
 
+    struct Bounty {
+        address employer;
+        string description;
+        string skillRequired;
+        uint256 amount;
+        Status status;
+    }
+
     address public owner;
 
     /// @notice Total number of bounties ever posted. The first bounty has id 1.
     uint256 public bountyCount;
 
-    // TODO: Define the rest of your state variables here.
-    // Consider:
-    // - How do you record who is registered, and with which skill?
-    // - What does a bounty need to remember? (employer, description, skill,
-    //   amount, status) A struct is a good fit here.
-    // - How do you remember who applied for which bounty?
+    /// @notice Skill each freelancer registered with. Empty string means unregistered.
+    mapping(address => string) private freelancerSkills;
+
+    /// @notice Bounty id => bounty details. Ids start at 1.
+    mapping(uint256 => Bounty) private bounties;
+
+    /// @notice bountyId => freelancer => whether they have applied
+    mapping(uint256 => mapping(address => bool)) private applications;
 
     constructor() {
         owner = msg.sender;
@@ -133,7 +143,6 @@ contract FreelanceBountyBoard {
     // - Set the bounty's status to Submitted
     // - Emit WorkSubmitted(bountyId, msg.sender, submissionUrl)
     function submitWork(uint256 bountyId, string calldata submissionUrl) external {
-        function submitWork(uint256 bountyId, string calldata submissionUrl) external {
         require(bountyId > 0 && bountyId <= bountyCount, "Bounty does not exist");
         require(applications[bountyId][msg.sender], "Has not applied");
 
@@ -194,7 +203,7 @@ contract FreelanceBountyBoard {
 
     /// @notice The skill this freelancer registered with ("" if unregistered)
     function getSkill(address freelancer) external view returns (string memory) {
-         return freelancerSkills[freelancer];
+        return freelancerSkills[freelancer];
     }
 
     /// @notice True if this freelancer applied for this bounty

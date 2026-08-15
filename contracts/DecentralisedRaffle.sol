@@ -31,13 +31,14 @@ contract DecentralisedRaffle {
     uint256 public raffleStartTime;
     bool public isPaused;
 
-    // TODO: Define the rest of your state variables here.
-    // Consider:
-    // - One call to enterRaffle() buys ONE entry, and a player may enter many
-    //   times. An array of addresses records every entry in order - the same
-    //   address simply appears more than once, which gives them better odds.
-    // - You also need the number of UNIQUE players, for the 3-player minimum.
-    // - The pot is just this contract's balance.
+    /// @notice Every entry this round, in order. The same address may appear more than once.
+    address[] private entries;
+
+    /// @notice Distinct addresses that have entered this round (for the 3-player minimum).
+    address[] private uniquePlayers;
+
+    /// @notice How many entries each address has bought this round.
+    mapping(address => uint256) private entryCounts;
 
     constructor() {
         owner = msg.sender;
@@ -66,7 +67,7 @@ contract DecentralisedRaffle {
     // - If this is the caller's first ever entry this round, they are a new
     //   unique player
     // - Emit RaffleEntered(msg.sender, <this player's total entries so far>)
-    function enterRaffle() external payable {
+    function enterRaffle() external payable whenNotPaused {
         require(msg.value >= MINIMUM_ENTRY, "Entry below minimum");
 
         if (entryCounts[msg.sender] == 0) {
@@ -137,7 +138,7 @@ contract DecentralisedRaffle {
     // - Owner only, both functions
     // - Set isPaused, and emit RafflePaused() / RaffleUnpaused()
     function pause() external onlyOwner {
-         isPaused = true;
+        isPaused = true;
         emit RafflePaused();
     }
 
