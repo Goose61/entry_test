@@ -56,11 +56,14 @@ database?"*
 - **D)** "Because a database can only handle a few thousand users, and
   blockchains scale infinitely."
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** B
 
 **Your Reasoning:**
 [2-3 sentences. What is the actual property a blockchain provides here? Name one
 honest cost of choosing it.]
+
+It is a trustless environment, no single person or entity controls a blockchain. The honest cost is that it is a bit more expensive than a traditional database.
+
 
 ---
 
@@ -79,7 +82,7 @@ You send a simple ETH transfer on Ethereum.
 - **C)** 0.00042 ETH (about $1.26)
 - **D)** 0.0042 ETH (about $12.60)
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** C
 
 **Your Calculation:**
 
@@ -90,6 +93,8 @@ You send a simple ETH transfer on Ethereum.
 [Then, in one or two sentences: why does a smart contract function that writes
 to storage cost far more than this simple transfer?]
 
+21000 x 20 Gwei = 420,000 Gwei = 0.00042 ETH
+ 
 ---
 
 ### Question 3: The Oracle Problem (3 marks + 2 for reasoning)
@@ -109,12 +114,14 @@ Your smart contract needs to know the current ETH/USD price.
   in a future upgrade.
 - **D)** Because API providers block blockchain nodes for security reasons.
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** B
 
 **Your Reasoning:**
 [2-3 sentences. Why would a single company running the only oracle undermine the
 point of building on a blockchain? What does a decentralised oracle network do
 about that?]
+
+Every node must get the same result, so the contract cannot call a live API. A single oracle company reintroduces that trust problem.
 
 ---
 
@@ -133,12 +140,13 @@ about that?]
   attacker their own stake. The cost of that stake is also what makes Sybil
   attacks - one actor spinning up thousands of fake nodes - uneconomic.
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** D
 
 **Your Reasoning:**
 [2-3 sentences. What does an attacker actually need to acquire to threaten a PoS
 chain, and what do they stand to lose? Name one difference from Proof of Work.]
 
+a PoS validator locks capital, bad intentions/acting is slashed. That stake is also what makes Sybil attacks expensive.
 ---
 
 ### Question 5: Layer 2s and Rollups (3 marks + 2 for reasoning)
@@ -157,11 +165,13 @@ chain, and what do they stand to lose? Name one difference from Proof of Work.]
 - **D)** It reduces gas costs by lowering the base fee on Ethereum itself
   whenever the rollup is active.
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** A
 
 **Your Reasoning:**
 [2-3 sentences. Most rollups today run a single centralised sequencer. What can
 that sequencer do to you, and what can it *not* do?]
+
+Rollups execute off-chain and share one L1 posting across the batch. A centralised sequencer can delay or reorder, it cannot steal funds.
 
 ---
 
@@ -184,11 +194,13 @@ them.
 - **D)** The seed phrase is just a backup of your public address, which is why it
   is safe to share with support staff if you get stuck.
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** C
 
 **Your Reasoning:**
 [2-3 sentences. What does a signature prove? What is the trade-off a user accepts
 by holding their own keys, and what does account abstraction do to soften it?]
+
+The seed phrase derives the private key that signs transactions. Nobody else can reset it
 
 ---
 
@@ -223,13 +235,14 @@ uint256 index = uint256(
 - **D)** It is insecure on Ethereum but safe on a Layer 2, because the sequencer
   orders transactions privately.
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** B
 
 **Your Reasoning:**
 [2-3 sentences. Who specifically can manipulate this draw, and what would they
 have to do? You will implement this shortcut in Part B anyway - so be clear
 about what you are shipping.]
 
+block.timestamp / prevrandao are public and proposer influenced. You still use the shortcut in Part B and must say it is not secure
 ---
 
 ### Question 8: Paying Out Safely (3 marks + 2 for reasoning)
@@ -262,20 +275,21 @@ function approveAndPay(uint256 bountyId, address freelancer) external {
 - **D)** The `require` on `msg.sender` should use `tx.origin` instead, so that
   contracts cannot call the function at all.
 
-**Your Answer:** [A/B/C/D]
+**Your Answer:** C
 
 **Your Reasoning:**
 [2-3 sentences. Walk through the exact sequence an attacking contract would use.
 Then apply the fix in your own `approveAndPay` - it is auto-marked.]
 
+Reentrancy: status is updated after the ETH send. Fix with checks-effects-interactions: set status to Completed before sending.
 ---
 
 ## SUBMISSION CHECKLIST
 
-- [ ] Every `**Your Answer:**` line contains a single letter and nothing else
-- [ ] You gave reasoning for all 8 questions
-- [ ] For Question 2 you showed your working
-- [ ] You committed and pushed to your fork
+- [X] Every `**Your Answer:**` line contains a single letter and nothing else
+- [X] You gave reasoning for all 8 questions
+- [X] For Question 2 you showed your working
+- [X] You committed and pushed to your fork
 
 ---
 

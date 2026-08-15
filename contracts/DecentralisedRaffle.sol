@@ -67,7 +67,16 @@ contract DecentralisedRaffle {
     //   unique player
     // - Emit RaffleEntered(msg.sender, <this player's total entries so far>)
     function enterRaffle() external payable {
-        // Your implementation here
+        require(msg.value >= MINIMUM_ENTRY, "Entry below minimum");
+
+        if (entryCounts[msg.sender] == 0) {
+            uniquePlayers.push(msg.sender);
+        }
+
+        entries.push(msg.sender);
+        entryCounts[msg.sender] += 1;
+
+        emit RaffleEntered(msg.sender, entryCounts[msg.sender]);
     }
 
     // -----------------------------------------------------------------------
@@ -97,7 +106,28 @@ contract DecentralisedRaffle {
     // in production instead. That explanation carries the marks here, not the
     // code.
     function selectWinner() external onlyOwner {
-        // Your implementation here
+        require(block.timestamp >= raffleStartTime + RAFFLE_DURATION, "Raffle still running");
+        require(uniquePlayers.length >= 3, "Not enough unique players");
+
+        uint256 currentRaffleId = raffleId;
+        uint256 index = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao)))
+            % entries.length;
+        address winner = entries[index];
+
+        uint256 pot = address(this).balance;
+        uint256 prize = (pot * 90) / 100;
+        uint256 ownerCut = pot - prize;
+
+        // Effects before interactions so a reentrant winner cannot draw again
+        // against the same pot, and so returning players start the next round clean.
+        _resetRaffle();
+
+        emit WinnerSelected(currentRaffleId, winner, prize);
+
+        (bool paidWinner, ) = winner.call{value: prize}("");
+        require(paidWinner, "Winner transfer failed");
+        (bool paidOwner, ) = owner.call{value: ownerCut}("");
+        require(paidOwner, "Owner transfer failed");
     }
 
     // -----------------------------------------------------------------------
@@ -107,11 +137,13 @@ contract DecentralisedRaffle {
     // - Owner only, both functions
     // - Set isPaused, and emit RafflePaused() / RaffleUnpaused()
     function pause() external onlyOwner {
-        // Your implementation
+         isPaused = true;
+        emit RafflePaused();
     }
 
     function unpause() external onlyOwner {
-        // Your implementation
+        isPaused = false;
+        emit RaffleUnpaused();
     }
 
     // -----------------------------------------------------------------------
@@ -120,22 +152,33 @@ contract DecentralisedRaffle {
 
     /// @notice The current pot, in wei
     function getPot() external view returns (uint256) {
-        // Your implementation here
+        return address(this).balance;
     }
 
     /// @notice How many entries this player has bought this round
     function getEntryCount(address player) external view returns (uint256) {
-        // Your implementation here
+        return entryCounts[player];
     }
 
     /// @notice Total number of entries this round, counting repeats
     function getPlayerCount() external view returns (uint256) {
-        // Your implementation here
+        return entries.length;
     }
 
     /// @notice Number of distinct addresses that have entered this round
     function getUniquePlayerCount() external view returns (uint256) {
-        // Your implementation here
+        return uniquePlayers.length;
+    }
+
+    /// @dev Clear this round's entries so the next raffle starts empty.
+    function _resetRaffle() private {
+        for (uint256 i = 0; i < uniquePlayers.length; i++) {
+            delete entryCounts[uniquePlayers[i]];
+        }
+        delete uniquePlayers;
+        delete entries;
+        raffleId += 1;
+        raffleStartTime = block.timestamp;
     }
 
     // BONUS (not auto-marked, describe it in PartB_Design.md instead):
