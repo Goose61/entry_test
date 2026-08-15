@@ -31,13 +31,14 @@ contract DecentralisedRaffle {
     uint256 public raffleStartTime;
     bool public isPaused;
 
-    // TODO: Define the rest of your state variables here.
-    // Consider:
-    // - One call to enterRaffle() buys ONE entry, and a player may enter many
-    //   times. An array of addresses records every entry in order - the same
-    //   address simply appears more than once, which gives them better odds.
-    // - You also need the number of UNIQUE players, for the 3-player minimum.
-    // - The pot is just this contract's balance.
+    /// @notice Every entry this round, including repeats. Index is the ticket.
+    address[] private _entries;
+
+    /// @notice Distinct players this round. Stale counts from earlier rounds
+    ///         are ignored via _lastEnteredRaffleId.
+    uint256 private _uniquePlayerCount;
+    mapping(address => uint256) private _entryCount;
+    mapping(address => uint256) private _lastEnteredRaffleId;
 
     constructor() {
         owner = msg.sender;
@@ -66,8 +67,19 @@ contract DecentralisedRaffle {
     // - If this is the caller's first ever entry this round, they are a new
     //   unique player
     // - Emit RaffleEntered(msg.sender, <this player's total entries so far>)
-    function enterRaffle() external payable {
-        // Your implementation here
+    function enterRaffle() external payable whenNotPaused {
+        require(msg.value >= MINIMUM_ENTRY, "Entry below minimum");
+
+        if (_lastEnteredRaffleId[msg.sender] != raffleId) {
+            _lastEnteredRaffleId[msg.sender] = raffleId;
+            _entryCount[msg.sender] = 0;
+            _uniquePlayerCount += 1;
+        }
+
+        _entries.push(msg.sender);
+        _entryCount[msg.sender] += 1;
+
+        emit RaffleEntered(msg.sender, _entryCount[msg.sender]);
     }
 
     // -----------------------------------------------------------------------
@@ -97,7 +109,34 @@ contract DecentralisedRaffle {
     // in production instead. That explanation carries the marks here, not the
     // code.
     function selectWinner() external onlyOwner {
-        // Your implementation here
+        require(block.timestamp >= raffleStartTime + RAFFLE_DURATION, "Raffle still running");
+        require(_uniquePlayerCount >= 3, "Need at least 3 unique players");
+        require(_entries.length > 0, "No entries");
+
+        uint256 pot = address(this).balance;
+        uint256 prize = (pot * 90) / 100;
+        uint256 ownerShare = pot - prize;
+
+        // NOT secure randomness. See PartB_Design.md. Solcurity C9 / SWC-120.
+        uint256 index = uint256(
+            keccak256(abi.encodePacked(block.timestamp, block.prevrandao, raffleId))
+        ) % _entries.length;
+        address winner = _entries[index];
+        uint256 currentRaffleId = raffleId;
+
+        // Effects before interaction
+        delete _entries;
+        _uniquePlayerCount = 0;
+        raffleId = currentRaffleId + 1;
+        raffleStartTime = block.timestamp;
+
+        emit WinnerSelected(currentRaffleId, winner, prize);
+
+        (bool paidWinner, ) = winner.call{value: prize}("");
+        require(paidWinner, "Winner transfer failed");
+
+        (bool paidOwner, ) = owner.call{value: ownerShare}("");
+        require(paidOwner, "Owner transfer failed");
     }
 
     // -----------------------------------------------------------------------
@@ -107,11 +146,13 @@ contract DecentralisedRaffle {
     // - Owner only, both functions
     // - Set isPaused, and emit RafflePaused() / RaffleUnpaused()
     function pause() external onlyOwner {
-        // Your implementation
+        isPaused = true;
+        emit RafflePaused();
     }
 
     function unpause() external onlyOwner {
-        // Your implementation
+        isPaused = false;
+        emit RaffleUnpaused();
     }
 
     // -----------------------------------------------------------------------
@@ -120,22 +161,25 @@ contract DecentralisedRaffle {
 
     /// @notice The current pot, in wei
     function getPot() external view returns (uint256) {
-        // Your implementation here
+        return address(this).balance;
     }
 
     /// @notice How many entries this player has bought this round
     function getEntryCount(address player) external view returns (uint256) {
-        // Your implementation here
+        if (_lastEnteredRaffleId[player] != raffleId) {
+            return 0;
+        }
+        return _entryCount[player];
     }
 
     /// @notice Total number of entries this round, counting repeats
     function getPlayerCount() external view returns (uint256) {
-        // Your implementation here
+        return _entries.length;
     }
 
     /// @notice Number of distinct addresses that have entered this round
     function getUniquePlayerCount() external view returns (uint256) {
-        // Your implementation here
+        return _uniquePlayerCount;
     }
 
     // BONUS (not auto-marked, describe it in PartB_Design.md instead):
