@@ -48,7 +48,25 @@ you show you understand what that costs.
 - **Who can manipulate it, and how?** Name the actor and the action.
 - What would you use in production instead, and why is that better?
 
-[Write your response here]
+The draw hashes `block.timestamp` and `block.prevrandao`, then takes that modulo
+the number of entries. Both inputs are public on-chain data, so anyone can
+recompute the same index inside the same block. This is **not** secure
+randomness; it is a 3-hour shortcut.
+
+Two actors can tilt it. The **block proposer / validator** can nudge the
+timestamp within the protocol's allowed drift, and they choose `prevrandao`
+(their previous mix). If the resulting index does not favour them (or a player
+they care about), they can withhold or reorder the block and try again. The
+**owner**, who is the only one allowed to call `selectWinner`, can also wait
+and submit the draw in a block whose hash they have already computed to be
+favourable — especially if they bought entries themselves.
+
+In production I would use **Chainlink VRF**: request the random word in one
+transaction, lock the raffle so nobody can enter while the request is in
+flight, then pick the winner in the VRF callback. That value comes from
+outside the chain and is verifiable, so neither the proposer nor the owner can
+grind blocks to choose the winner. A commit-reveal among players would also
+work, but VRF is the practical choice here.
 
 ---
 
